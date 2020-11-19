@@ -1,6 +1,14 @@
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
-import { Image, StyleSheet, Text, View, Dimensions } from "react-native";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  View,
+  Dimensions,
+  ScrollView,
+  Alert,
+} from "react-native";
 import HoldButton from "/FCIT/SEM 7/490/amongus/components/HoldButton.jsx";
 import KeyPad from "./components/KeyPad.jsx";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -30,8 +38,37 @@ let db = firebase.database();
 // });
 
 var playersRef = db.ref("AmongUS/currentPlayers/");
+var randomPlayer = db.ref(
+  `AmongUS/currentPlayers/${1 + parseInt(Math.random() * 5)}`
+);
 
 var gameStarted = db.ref("AmongUS/Game_Settings/game_started");
+
+const colors = {
+  black: {
+    alive: "./assets/black.png",
+    dead: "./assets/black_dead.png",
+  },
+
+  red: {
+    alive: "./assets/red.png",
+    dead: "./assets/red_dead.png",
+  },
+  green: {
+    alive: "./assets/green.png",
+    dead: "./assets/green_dead.png",
+  },
+
+  orange: {
+    alive: "./assets/orange.png",
+    dead: "./assets/orange_dead.png",
+  },
+
+  blue: {
+    alive: "./assets/blue.png",
+    dead: "./assets/blue_dead.png",
+  },
+};
 
 function Home() {
   return (
@@ -49,26 +86,120 @@ class AdminPage extends React.Component {
     super(props);
     this.state = {
       players: [],
+      startButton: null,
     };
+
     playersRef.on("value", (snapshot) => {
       this.setState({ players: snapshot.val() });
+      console.log(`ARRAY: ${this.state.players}`);
+    });
+
+    gameStarted.on("value", (snapshot) => {
+      if (snapshot.val() == true) {
+        this.setState({
+          startButton: <Text>Game Already started, reset to start again.</Text>,
+        });
+      } else {
+        this.setState({
+          startButton: (
+            <TouchableOpacity
+              onPress={() => {
+                if (
+                  !(
+                    this.state.players == null || this.state.players.length == 0
+                  )
+                ) {
+                  randomPlayer.update({ imposter: true });
+                }
+                db.ref("/AmongUS/Game_Settings/").update({
+                  game_started: true,
+                });
+              }}
+              style={styles.button}
+            >
+              <Text>Start Game</Text>
+            </TouchableOpacity>
+          ),
+        });
+      }
     });
   }
 
   render() {
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.button}>
-          <Text>Start Game</Text>
+        {this.state.startButton}
+        <TouchableOpacity
+          onPress={() => {
+            playersRef.remove();
+            db.ref("/AmongUS/Game_Settings/").update({ game_started: false });
+          }}
+          style={[styles.button, { marginBottom: 30 }]}
+        >
+          <Text>Reset Game</Text>
         </TouchableOpacity>
-        {this.state.players.map((player) => {
-          return (
-            <Image
-              style={styles.image}
-              source={require(`./assets/${player.color}`)}
-            ></Image>
-          );
-        })}
+        <ScrollView
+          contentContainerStyle={{
+            width: windowWidth,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {() => {
+            this.state.players == null ? (
+              <Text>{"Not enough players"}</Text>
+            ) : (
+              this.state.players.map((player) => {
+                var imageSrc = () => {
+                  if (player.color == "black") {
+                    return (
+                      <Image
+                        style={styles.image}
+                        source={require("./assets/black.png")}
+                      ></Image>
+                    );
+                  } else if (player.color == "red") {
+                    return (
+                      <Image
+                        style={styles.image}
+                        source={require("./assets/red.png")}
+                      ></Image>
+                    );
+                  } else if (player.color == "green") {
+                    return (
+                      <Image
+                        style={styles.image}
+                        source={require("./assets/green.png")}
+                      ></Image>
+                    );
+                  } else if (player.color == "orange") {
+                    return (
+                      <Image
+                        style={styles.image}
+                        source={require("./assets/orange.png")}
+                      ></Image>
+                    );
+                  } else {
+                    return (
+                      <Image
+                        style={styles.image}
+                        source={require("./assets/blue.png")}
+                      ></Image>
+                    );
+                  }
+                };
+                return (
+                  <View>
+                    <Text style={{ fontSize: 18, textAlign: "center" }}>
+                      {`Name: ${player.name}\nImposter?: ${player.imposter}`}
+                    </Text>
+                    {imageSrc()}
+                  </View>
+                );
+              })
+            );
+          }}
+        </ScrollView>
       </View>
     );
   }
@@ -106,6 +237,7 @@ const styles = StyleSheet.create({
   },
 
   button: {
+    marginTop: 20,
     width: windowWidth * 0.3,
     justifyContent: "center",
     alignItems: "center",
