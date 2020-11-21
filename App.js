@@ -6,15 +6,17 @@ import {
   Text,
   View,
   Dimensions,
-  ScrollView,
+  Button,
   Alert,
+  ScrollView,
 } from "react-native";
-import HoldButton from "/FCIT/SEM 7/490/amongus/components/HoldButton.jsx";
+import HoldButton from "./components/HoldButton.jsx";
 import KeyPad from "./components/KeyPad.jsx";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
 import { TextInput, TouchableOpacity } from "react-native-gesture-handler";
 import * as firebase from "firebase";
+import ProgressBar from "react-native-progress/Bar";
 
 const windowWidth = Dimensions.get("window").width;
 const windowHeight = Dimensions.get("window").height;
@@ -33,65 +35,114 @@ if (!firebase.apps.length) {
 }
 let db = firebase.database();
 
-// db.ref("/AmongUS/Game_Settings/game_started").on("value", (snapshot) => {
-//   console.log(": " + snapshot.val());
-// });
-
 var playersRef = db.ref("AmongUS/currentPlayers/");
-var randomPlayer = db.ref(
-  `AmongUS/currentPlayers/${1 + parseInt(Math.random() * 5)}`
-);
+var imposterID = 1 + Math.floor(Math.random() * 5);
+console.log(imposterID);
+var randomPlayer = db.ref(`AmongUS/currentPlayers/` + imposterID);
 
 var gameStarted = db.ref("AmongUS/Game_Settings/game_started");
 
-const colors = {
-  black: {
-    alive: "./assets/black.png",
-    dead: "./assets/black_dead.png",
+let globalTasks = [];
+db.ref("AmongUS/tasks_rfid").once("value", (snapshot) => {
+  globalTasks = snapshot.val();
+});
+
+const colorsPath = {
+  1: {
+    false: require("./assets/red.png"),
+    true: require("./assets/red_dead.png"),
   },
 
-  red: {
-    alive: "./assets/red.png",
-    dead: "./assets/red_dead.png",
+  2: {
+    false: require("./assets/blue.png"),
+    true: require("./assets/blue_dead.png"),
   },
-  green: {
-    alive: "./assets/green.png",
-    dead: "./assets/green_dead.png",
-  },
-
-  orange: {
-    alive: "./assets/orange.png",
-    dead: "./assets/orange_dead.png",
+  3: {
+    false: require("./assets/green.png"),
+    true: require("./assets/green_dead.png"),
   },
 
-  blue: {
-    alive: "./assets/blue.png",
-    dead: "./assets/blue_dead.png",
+  4: {
+    false: require("./assets/orange.png"),
+    true: require("./assets/orange_dead.png"),
+  },
+
+  5: {
+    false: require("./assets/black.png"),
+    true: require("./assets/black_dead.png"),
   },
 };
 
-function Home() {
-  return (
-    <View style={styles.container}>
-      <Text>Your name: </Text>
-      <TextInput style={styles.TextInput}></TextInput>
-      <Text>Device id: </Text>
-      <TextInput style={styles.TextInput}></TextInput>
-    </View>
-  );
+class Home extends React.Component {
+  constructor(props) {
+    super(props);
+  }
+  render() {
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity
+          onPress={() => this.props.navigation.navigate("Player Page")}
+          style={styles.button}
+        >
+          <Text style={{ fontSize: 18 }}>Player</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => this.props.navigation.navigate("Admin Page")}
+          style={styles.button}
+        >
+          <Text style={{ fontSize: 18 }}>Admin</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 }
 
 class AdminPage extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      players: [],
-      startButton: null,
+      players: null,
+      startButton: (
+        <TouchableOpacity
+          onPress={() => {
+            console.log(this.state.players);
+            if (this.state.playersArray.length == 5) {
+              randomPlayer.update({ imposter: true });
+              db.ref("/AmongUS/Game_Settings/").update({
+                game_started: true,
+              });
+            } else {
+              Alert.alert("Not enough players to start game!");
+            }
+          }}
+          style={styles.button}
+        >
+          <Text>Start Game</Text>
+        </TouchableOpacity>
+      ),
+      playersArray: [],
     };
 
     playersRef.on("value", (snapshot) => {
+      let tempPlayers = [];
+      console.log("AAAA: " + snapshot.val());
       this.setState({ players: snapshot.val() });
-      console.log(`ARRAY: ${this.state.players}`);
+
+      if (this.state.players != null) {
+        Object.keys(this.state.players).forEach((key) => {
+          // console.log(
+          //   `Name: ${this.state.players[key].name}\nColor: ${this.state.players[key].color}`
+          // );
+          setTimeout(() => {}, 100);
+          tempPlayers.push(this.state.players[key]);
+          this.setState({ playersArray: tempPlayers });
+        });
+        // console.log(
+        //   this.state.players.map((player) => {
+        //     return `Name: ${player.name}\n${player.color}`;
+        //   })
+        // );
+      }
     });
 
     gameStarted.on("value", (snapshot) => {
@@ -104,16 +155,15 @@ class AdminPage extends React.Component {
           startButton: (
             <TouchableOpacity
               onPress={() => {
-                if (
-                  !(
-                    this.state.players == null || this.state.players.length == 0
-                  )
-                ) {
+                console.log(this.state.players);
+                if (this.state.playersArray.length == 5) {
                   randomPlayer.update({ imposter: true });
+                  db.ref("/AmongUS/Game_Settings/").update({
+                    game_started: true,
+                  });
+                } else {
+                  Alert.alert("Not enough players to start game!");
                 }
-                db.ref("/AmongUS/Game_Settings/").update({
-                  game_started: true,
-                });
               }}
               style={styles.button}
             >
@@ -133,6 +183,8 @@ class AdminPage extends React.Component {
           onPress={() => {
             playersRef.remove();
             db.ref("/AmongUS/Game_Settings/").update({ game_started: false });
+            this.setState({ players: [] });
+            this.setState({ playersArray: [] });
           }}
           style={[styles.button, { marginBottom: 30 }]}
         >
@@ -145,63 +197,243 @@ class AdminPage extends React.Component {
             justifyContent: "center",
           }}
         >
-          {() => {
-            this.state.players == null ? (
-              <Text>{"Not enough players"}</Text>
-            ) : (
-              this.state.players.map((player) => {
-                var imageSrc = () => {
-                  if (player.color == "black") {
-                    return (
-                      <Image
-                        style={styles.image}
-                        source={require("./assets/black.png")}
-                      ></Image>
-                    );
-                  } else if (player.color == "red") {
-                    return (
-                      <Image
-                        style={styles.image}
-                        source={require("./assets/red.png")}
-                      ></Image>
-                    );
-                  } else if (player.color == "green") {
-                    return (
-                      <Image
-                        style={styles.image}
-                        source={require("./assets/green.png")}
-                      ></Image>
-                    );
-                  } else if (player.color == "orange") {
-                    return (
-                      <Image
-                        style={styles.image}
-                        source={require("./assets/orange.png")}
-                      ></Image>
-                    );
-                  } else {
-                    return (
-                      <Image
-                        style={styles.image}
-                        source={require("./assets/blue.png")}
-                      ></Image>
-                    );
-                  }
-                };
-                return (
-                  <View>
-                    <Text style={{ fontSize: 18, textAlign: "center" }}>
-                      {`Name: ${player.name}\nImposter?: ${player.imposter}`}
-                    </Text>
-                    {imageSrc()}
-                  </View>
-                );
-              })
+          {this.state.playersArray.map((player) => {
+            return (
+              <View key={player.color}>
+                <Text
+                  key={player.color}
+                  style={{ fontSize: 18 }}
+                >{`Name:   ${player.name}\nColor:  ${player.color}\nImposter?: ${player.imposter}`}</Text>
+                <Image
+                  style={styles.image}
+                  source={colorsPath[player.deviceID][player.dead]}
+                ></Image>
+              </View>
             );
-          }}
+          })}
         </ScrollView>
       </View>
     );
+  }
+}
+
+class PlayerPage extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      name: "",
+      deviceID: "",
+      gameStarted: false,
+      color: "black",
+      imposter: false,
+      myTasks: [],
+      currentTask: 0,
+      dead: false,
+      joinedGame: false,
+      totalDoneTasks: 0,
+      sabotage: "",
+      meeting: "",
+    };
+  }
+
+  render() {
+    if (!this.state.joinedGame) {
+      return (
+        <View style={styles.container}>
+          <Text>Your name: </Text>
+          <TextInput
+            onChangeText={(n) => this.setState({ name: n })}
+            style={styles.TextInput}
+          ></TextInput>
+          <Text>Device id: </Text>
+          <TextInput
+            keyboardType="phone-pad"
+            onChangeText={(id) => this.setState({ deviceID: id })}
+            style={styles.TextInput}
+          ></TextInput>
+          <Button onPress={this.addPlayer.bind(this)} title="Join game" />
+        </View>
+      );
+    } else {
+      if (!this.state.gameStarted) {
+        return (
+          <View style={styles.container}>
+            <Image
+              style={styles.image}
+              source={colorsPath[this.state.deviceID][this.state.dead]}
+            ></Image>
+            <Text style={{ fontSize: 18 }}>
+              Please wait. the game has not started.
+            </Text>
+          </View>
+        );
+      } else {
+        return (
+          <View style={styles.container}>
+            <Text>Total tasks bar: </Text>
+            <ProgressBar
+              borderRadius={4}
+              color={this.state.color}
+              animated={true}
+              progress={this.state.totalDoneTasks / 20}
+              width={windowWidth * 0.5}
+            />
+            <Image
+              style={styles.image}
+              source={colorsPath[this.state.deviceID][this.state.dead]}
+            ></Image>
+            {this.loadCenter()}
+            {this.loadTask()}
+          </View>
+        );
+      }
+    }
+  }
+
+  loadTask() {
+    if (this.state.currentTask > 0) {
+      return <Text>loading task: {this.state.currentTask}</Text>;
+    }
+  }
+
+  addPlayer() {
+    if (this.state.deviceID != -1 && this.state.name != "") {
+      let deviceID = this.state.deviceID;
+      let color = "";
+      if (deviceID == 1) {
+        color = "red";
+      }
+      if (deviceID == 2) {
+        color = "blue";
+      }
+      if (deviceID == 3) {
+        color = "green";
+      }
+      if (deviceID == 4) {
+        color = "orange";
+      }
+      if (deviceID == 5) {
+        color = "black";
+      }
+
+      db.ref("AmongUS/currentPlayers/" + this.state.deviceID).update({
+        color: color,
+        deviceID: this.state.deviceID,
+        name: this.state.name,
+        imposter: false,
+        dead: false,
+        current_task: "",
+      });
+      this.setState({ color: color });
+      this.setState({ joinedGame: true });
+      this.joinLobby();
+    }
+  }
+
+  joinLobby() {
+    // waiting for game to start
+    gameStarted.on("value", (snapshot) => {
+      if (snapshot.val()) {
+        // true == game has started
+        // when will i die :(
+        db.ref("AmongUS/currentPlayers/" + this.state.deviceID + "/dead").on(
+          "value",
+          (snapshot) => {
+            this.setState({ dead: snapshot.val() });
+          }
+        );
+        // if something changed
+        db.ref("AmongUS/current_game_settings/").on("value", (snapshot) => {
+          this.setState({ totalDoneTasks: snapshot.val().num_Tasks });
+          this.setState({ sabotage: snapshot.val().sabotage });
+          this.setState({ meeting: snapshot.val().meeting });
+        });
+
+        this.setState({ gameStarted: true });
+        // check if i'm imposter
+        db.ref(
+          "AmongUS/currentPlayers/" + this.state.deviceID + "/imposter"
+        ).once("value", (snapshot) => {
+          // if i'm imposter
+          if (snapshot.val()) {
+            //Alert("you are the imposter")
+            // update status
+            this.setState({ imposter: true });
+            // show imposter sabotage screen
+            // TODO
+          } else {
+            //Alert("you are not the imposter")
+            // load my task
+            db.ref(
+              "AmongUS/currentPlayers/" +
+                this.state.deviceID +
+                "/tasks_group_id"
+            ).once("value", (snapshot) => {
+              this.setState({ myTasks: globalTasks[snapshot.val()] });
+            });
+            // Waiting for scanner
+            db.ref(
+              "AmongUS/currentPlayers/" + this.state.deviceID + "/current_task"
+            ).on("value", (snapshot) => {
+              if (snapshot.val() != "") {
+                // load the task
+                // console.log("loading task with id:" + this.state.myTasks[snapshot.val()].Task_id);
+                // this.setState({ currentTask: this.state.myTasks[snapshot.val()].Task_id });
+              }
+            });
+            // waiting for task bar changes
+            // TODO
+          }
+        });
+      }
+    });
+  }
+
+  loadCenter() {
+    if (this.state.gameStarted) {
+      if (!this.state.dead) {
+        // if there's a meeting
+        if (this.state.meeting != "") {
+          return (
+            <Text style={{ fontSize: 18 }}>
+              There's a meeting called by: {this.state.meeting}. Go to the
+              meeting place.
+            </Text>
+          );
+        } else {
+          if (this.state.imposter) {
+            return (
+              <Text>You are the IMPOSTER</Text>
+              // load sabotage menu
+            );
+          } else {
+            // check if there's a sabotage don't load tasks
+            if (this.state.sabotage != "") {
+              return (
+                <Text style={{ fontSize: 18 }}>
+                  There's sabotage: {this.state.sabotage}
+                </Text>
+              );
+            } else {
+              let tasks = "";
+              Object.keys(this.state.myTasks).forEach(
+                (key) =>
+                  (tasks +=
+                    "You have task in: " +
+                    this.state.myTasks[key].Task_location +
+                    "\n")
+              );
+              return (
+                (<Text>I"M NOT IMPOSTER, Loading tasks here</Text>),
+                (<Text>{tasks}</Text>)
+              );
+            }
+          }
+        }
+      } else {
+        return <Text>u r dead</Text>;
+      }
+    }
   }
 }
 
@@ -213,6 +445,8 @@ function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
+        {/* <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="Player Page" component={PlayerPage} /> */}
         <Stack.Screen name="Admin Page" component={AdminPage} />
       </Stack.Navigator>
     </NavigationContainer>
