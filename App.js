@@ -15,8 +15,9 @@ import KeyPad from "./components/KeyPad.jsx";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
 import { TextInput, TouchableOpacity } from "react-native-gesture-handler";
+import ProgressBar from 'react-native-progress/Bar';
 import * as firebase from "firebase";
-import ProgressBar from "react-native-progress/Bar";
+import { color } from "react-native-reanimated";
 
 const windowWidth = Dimensions.get("window").width;
 const windowHeight = Dimensions.get("window").height;
@@ -33,19 +34,7 @@ var firebaseConfig = {
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
-let db = firebase.database();
-
-var playersRef = db.ref("AmongUS/currentPlayers/");
-var imposterID = 1 + Math.floor(Math.random() * 5);
-console.log(imposterID);
-var randomPlayer = db.ref(`AmongUS/currentPlayers/` + imposterID);
-
-var gameStarted = db.ref("AmongUS/Game_Settings/game_started");
-
-let globalTasks = [];
-db.ref("AmongUS/tasks_rfid").once("value", (snapshot) => {
-  globalTasks = snapshot.val();
-});
+const db = firebase.database();
 
 const colorsPath = {
   1: {
@@ -97,99 +86,167 @@ class Home extends React.Component {
   }
 }
 
+// __________________________________________________________________________ START ADMIN PAGE __________________________________________________________________________
+
+var playersRef = db.ref("AmongUS/currentPlayers/");
+var gameStarted = db.ref("AmongUS/Game_Settings/game_started");
+
 class AdminPage extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      players: null,
-      startButton: (
-        <TouchableOpacity
-          onPress={() => {
-            console.log(this.state.players);
-            if (this.state.playersArray.length == 5) {
-              randomPlayer.update({ imposter: true });
-              db.ref("/AmongUS/Game_Settings/").update({
-                game_started: true,
-              });
-            } else {
-              Alert.alert("Not enough players to start game!");
-            }
-          }}
-          style={styles.button}
-        >
-          <Text>Start Game</Text>
-        </TouchableOpacity>
-      ),
+      totalDoneTasks: 0,
+      sabotage: "",
+      meeting: "",
+      startButton: [],
       playersArray: [],
+      didGameStarted: false,
     };
 
+    // read the game status only once
+    gameStarted.on("value", (snapshot) => {
+      this.setState({ didGameStarted: snapshot.val() });
+      // if game did start, start waiting for tasks update
+      if (snapshot.val()) {
+        db.ref("AmongUS/current_game_settings/").on("value", (snapshot) => {
+          this.setState({ totalDoneTasks: snapshot.val().num_Tasks });
+          this.setState({ sabotage: snapshot.val().sabotage });
+          this.setState({ meeting: snapshot.val().meeting });
+        });
+      }
+    });
+
+    // every time changes happens update the players array
     playersRef.on("value", (snapshot) => {
       let tempPlayers = [];
-      console.log("AAAA: " + snapshot.val());
-      this.setState({ players: snapshot.val() });
-
-      if (this.state.players != null) {
-        Object.keys(this.state.players).forEach((key) => {
-          // console.log(
-          //   `Name: ${this.state.players[key].name}\nColor: ${this.state.players[key].color}`
-          // );
-          setTimeout(() => {}, 100);
-          tempPlayers.push(this.state.players[key]);
-          this.setState({ playersArray: tempPlayers });
+      if (snapshot.val() != null) {
+        Object.keys(snapshot.val()).forEach((key) => {
+          tempPlayers.push(snapshot.val()[key]);
         });
-        // console.log(
-        //   this.state.players.map((player) => {
-        //     return `Name: ${player.name}\n${player.color}`;
-        //   })
-        // );
+        this.setState({ playersArray: tempPlayers });
       }
     });
 
-    gameStarted.on("value", (snapshot) => {
-      if (snapshot.val() == true) {
-        this.setState({
-          startButton: <Text>Game Already started, reset to start again.</Text>,
-        });
-      } else {
-        this.setState({
-          startButton: (
-            <TouchableOpacity
-              onPress={() => {
-                console.log(this.state.players);
-                if (this.state.playersArray.length == 5) {
-                  randomPlayer.update({ imposter: true });
-                  db.ref("/AmongUS/Game_Settings/").update({
-                    game_started: true,
-                  });
-                } else {
-                  Alert.alert("Not enough players to start game!");
-                }
-              }}
-              style={styles.button}
-            >
-              <Text>Start Game</Text>
-            </TouchableOpacity>
-          ),
-        });
+
+  }
+  getResetButton() {
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          playersRef.remove();
+          db.ref("/AmongUS/Game_Settings/").update({ game_started: false });
+          db.ref("AmongUS/currentPlayers").remove();
+          this.setState({ playersArray: [] });
+        }}
+        style={[styles.button, { marginBottom: 30 }]}
+      >
+        <Text>Reset Game</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  startTheGame() {
+    var imposterID = 1 + Math.floor(Math.random() * 5);
+    db.ref(`AmongUS/currentPlayers/` + imposterID).update({ imposter: true });
+    // Give other players their group id
+    var taskGroupID = [1, 2, 3, 4];
+    for (let index = 1; index <= 5; index++) {
+      // skipping the imposter
+      if (index == imposterID) {
+        continue;
       }
+      // taking a task id randomly from the array
+      var groupID = taskGroupID[(Math.floor(Math.random() * taskGroupID.length))]; // from 0 to the size of the array
+      // removing the number from array
+      taskGroupID.splice(taskGroupID.indexOf(groupID), 1);
+
+      // setting the group id to the player
+      db.ref("AmongUS/currentPlayers/" + index).update({
+        tasks_group_id: groupID
+      });
+    }
+
+    db.ref("AmongUS/current_game_settings/").update({
+      meeting: "",
+      sabotage: "",
+      num_Tasks: 0
     });
+    db.ref("/AmongUS/Game_Settings/").update({
+      game_started: true,
+    });
+  }
+
+  getStartButton() {
+    return (
+      <TouchableOpacity
+        onPress={() => {
+          if (this.state.playersArray.length == 5) {
+            this.startTheGame();
+          } else {
+            Alert.alert("Not enough players to start game!");
+          }
+        }}
+        style={styles.button}
+      >
+        <Text>Start Game</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  getButtons() {
+    if (!this.state.didGameStarted) {
+      return this.getStartButton();
+    } else {
+      return this.getResetButton();
+    }
+  }
+
+ meetingAlert() {
+    {
+      if(this.state.meeting!=""){
+       return <TouchableOpacity
+      onPress={() => {
+        // clear
+        db.ref("AmongUS/current_game_settings/").update({
+          meeting: ""
+        });
+        }
+      }
+      style={styles.bigButton}
+    >
+      <Text style={{color:'red', fontSize: 18 }}>Remove meeting from {this.state.meeting}</Text>
+     </TouchableOpacity>
+      }
+    }
+  }
+ sabotageAlert() {
+    {
+      if(this.state.sabotage!=""){
+       return <Text style={{color:'red', fontSize: 18 }}>
+       There's sabotage: {this.state.sabotage}
+     </Text>
+    //   <TouchableOpacity
+    //   onPress={() => {
+    //     // clear
+    //     db.ref("AmongUS/current_game_settings/").update({
+    //       sabotage: ""
+    //     });
+    //     }
+    //   }
+    //   style={styles.button}
+    // >
+    //   <Text>remove sabotage</Text>
+    // </TouchableOpacity>
+      }
+    }
   }
 
   render() {
     return (
       <View style={styles.container}>
-        {this.state.startButton}
-        <TouchableOpacity
-          onPress={() => {
-            playersRef.remove();
-            db.ref("/AmongUS/Game_Settings/").update({ game_started: false });
-            this.setState({ players: [] });
-            this.setState({ playersArray: [] });
-          }}
-          style={[styles.button, { marginBottom: 30 }]}
-        >
-          <Text>Reset Game</Text>
-        </TouchableOpacity>
+        {this.getButtons()}
+        {this.meetingAlert()}
+        {this.sabotageAlert()}
         <ScrollView
           contentContainerStyle={{
             width: windowWidth,
@@ -199,15 +256,26 @@ class AdminPage extends React.Component {
         >
           {this.state.playersArray.map((player) => {
             return (
-              <View key={player.color}>
-                <Text
-                  key={player.color}
-                  style={{ fontSize: 18 }}
-                >{`Name:   ${player.name}\nColor:  ${player.color}\nImposter?: ${player.imposter}`}</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  alignSelf: "center",
+                }}
+                key={player.deviceID}
+              >
                 <Image
                   style={styles.image}
                   source={colorsPath[player.deviceID][player.dead]}
                 ></Image>
+                <Text key={player.color} style={{ fontSize: 18 }}>
+                  {`${player.name}\n with device id: ${player.deviceID}\n`}{" "}
+                  {player.imposter ? (
+                    <Text style={{ color: "red" }}>The imposter</Text>
+                  ) : (
+                    ""
+                  )}
+                </Text>
               </View>
             );
           })}
@@ -216,6 +284,17 @@ class AdminPage extends React.Component {
     );
   }
 }
+
+// __________________________________________________________________________ END ADMIN PAGE __________________________________________________________________________
+
+// __________________________________________________________________________ START PLAYER PAGE __________________________________________________________________________
+
+let globalTasks = [];
+db.ref("AmongUS/tasks_rfid").once("value", (snapshot) => {
+  globalTasks = snapshot.val();
+});
+
+var gameStarted = db.ref("AmongUS/Game_Settings/game_started");
 
 class PlayerPage extends React.Component {
   constructor(props) {
@@ -234,6 +313,13 @@ class PlayerPage extends React.Component {
       sabotage: "",
       meeting: "",
     };
+
+    db.ref("AmongUS/Game_Settings/game_started").once("value", (snapshot) => {
+      if (snapshot.val()){
+        Alert.alert("The game has already started!");
+        this.props.navigation.navigate("Home")
+      }
+    });
   }
 
   render() {
@@ -381,8 +467,6 @@ class PlayerPage extends React.Component {
                 // this.setState({ currentTask: this.state.myTasks[snapshot.val()].Task_id });
               }
             });
-            // waiting for task bar changes
-            // TODO
           }
         });
       }
@@ -436,17 +520,16 @@ class PlayerPage extends React.Component {
     }
   }
 }
+// __________________________________________________________________________ END PLAYER PAGE __________________________________________________________________________
 
 function App() {
-  const [imposter, isImposter] = useState(false);
-
   const Stack = createStackNavigator();
 
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {/* <Stack.Screen name="Home" component={Home} />
-        <Stack.Screen name="Player Page" component={PlayerPage} /> */}
+        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="Player Page" component={PlayerPage} />
         <Stack.Screen name="Admin Page" component={AdminPage} />
       </Stack.Navigator>
     </NavigationContainer>
@@ -481,9 +564,25 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
 
+  bigButton: {
+    marginTop: 10,
+    width: windowWidth * 0.8,
+    justifyContent: "center",
+    alignItems: "center",
+    height: windowHeight * 0.08,
+    borderWidth: 1,
+    borderColor: "black",
+    borderRadius: 25,
+  },
+
   image: {
     width: 128,
     height: 128,
+  },
+
+  imageAdminPage: {
+    width: 96,
+    height: 96,
   },
 });
 
