@@ -15,9 +15,11 @@ import KeyPad from "./components/KeyPad.jsx";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
 import { TextInput, TouchableOpacity } from "react-native-gesture-handler";
-import ProgressBar from 'react-native-progress/Bar';
+import ProgressBar from "react-native-progress/Bar";
 import * as firebase from "firebase";
 import { color } from "react-native-reanimated";
+
+let sabotageTasks = [HoldButton, KeyPad];
 
 const windowWidth = Dimensions.get("window").width;
 const windowHeight = Dimensions.get("window").height;
@@ -65,21 +67,55 @@ const colorsPath = {
 class Home extends React.Component {
   constructor(props) {
     super(props);
+    this.state = {
+      admin_exists: false,
+    };
+    db.ref("AmongUS/Game_Settings/admin_exists").on("value", (snapshot) => {
+      this.setState({ admin_exists: snapshot.val() });
+    });
   }
   render() {
     return (
       <View style={styles.container}>
         <TouchableOpacity
+          disabled={!this.state.admin_exists}
           onPress={() => this.props.navigation.navigate("Player Page")}
-          style={styles.button}
+          style={[
+            styles.button,
+            {
+              backgroundColor: this.state.admin_exists
+                ? "transparent"
+                : "silver",
+            },
+          ]}
         >
-          <Text style={{ fontSize: 18 }}>Player</Text>
+          <Text style={[{ fontSize: 18 }, { color: "black" }]}>Player</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => this.props.navigation.navigate("Admin Page")}
-          style={styles.button}
+          disabled={this.state.admin_exists}
+          onPress={() => {
+            db.ref("AmongUS/Game_Settings/").update({ admin_exists: true });
+            this.props.navigation.navigate("Admin Page");
+          }}
+          style={[
+            styles.button,
+            {
+              backgroundColor: this.state.admin_exists
+                ? "silver"
+                : "transparent",
+            },
+          ]}
         >
-          <Text style={{ fontSize: 18 }}>Admin</Text>
+          <Text
+            style={[
+              { fontSize: 18 },
+              {
+                color: "black",
+              },
+            ]}
+          >
+            Admin
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -90,6 +126,7 @@ class Home extends React.Component {
 
 var playersRef = db.ref("AmongUS/currentPlayers/");
 var gameStarted = db.ref("AmongUS/Game_Settings/game_started");
+var adminExists = db.ref("AmongUS/Game_Settings/admin_exists");
 
 class AdminPage extends React.Component {
   constructor(props) {
@@ -126,17 +163,20 @@ class AdminPage extends React.Component {
         this.setState({ playersArray: tempPlayers });
       }
     });
-
-
   }
   getResetButton() {
     return (
       <TouchableOpacity
         onPress={() => {
           playersRef.remove();
-          db.ref("/AmongUS/Game_Settings/").update({ game_started: false });
+          db.ref("/AmongUS/Game_Settings/").update({
+            game_started: false,
+            admin_exists: false,
+          });
+
           db.ref("AmongUS/currentPlayers").remove();
           this.setState({ playersArray: [] });
+          this.props.navigation.navigate("Home");
         }}
         style={[styles.button, { marginBottom: 30 }]}
       >
@@ -156,20 +196,20 @@ class AdminPage extends React.Component {
         continue;
       }
       // taking a task id randomly from the array
-      var groupID = taskGroupID[(Math.floor(Math.random() * taskGroupID.length))]; // from 0 to the size of the array
+      var groupID = taskGroupID[Math.floor(Math.random() * taskGroupID.length)]; // from 0 to the size of the array
       // removing the number from array
       taskGroupID.splice(taskGroupID.indexOf(groupID), 1);
 
       // setting the group id to the player
       db.ref("AmongUS/currentPlayers/" + index).update({
-        tasks_group_id: groupID
+        tasks_group_id: groupID,
       });
     }
 
     db.ref("AmongUS/current_game_settings/").update({
       meeting: "",
       sabotage: "",
-      num_Tasks: 0
+      num_Tasks: 0,
     });
     db.ref("/AmongUS/Game_Settings/").update({
       game_started: true,
@@ -201,42 +241,47 @@ class AdminPage extends React.Component {
     }
   }
 
- meetingAlert() {
+  meetingAlert() {
     {
-      if(this.state.meeting!=""){
-       return <TouchableOpacity
-      onPress={() => {
-        // clear
-        db.ref("AmongUS/current_game_settings/").update({
-          meeting: ""
-        });
-        }
-      }
-      style={styles.bigButton}
-    >
-      <Text style={{color:'red', fontSize: 18 }}>Remove meeting from {this.state.meeting}</Text>
-     </TouchableOpacity>
+      if (this.state.meeting != "") {
+        return (
+          <TouchableOpacity
+            onPress={() => {
+              // clear
+              db.ref("AmongUS/current_game_settings/").update({
+                meeting: "",
+              });
+            }}
+            style={styles.bigButton}
+          >
+            <Text style={{ color: "red", fontSize: 18 }}>
+              Remove meeting from {this.state.meeting}
+            </Text>
+          </TouchableOpacity>
+        );
       }
     }
   }
- sabotageAlert() {
+  sabotageAlert() {
     {
-      if(this.state.sabotage!=""){
-       return <Text style={{color:'red', fontSize: 18 }}>
-       There's sabotage: {this.state.sabotage}
-     </Text>
-    //   <TouchableOpacity
-    //   onPress={() => {
-    //     // clear
-    //     db.ref("AmongUS/current_game_settings/").update({
-    //       sabotage: ""
-    //     });
-    //     }
-    //   }
-    //   style={styles.button}
-    // >
-    //   <Text>remove sabotage</Text>
-    // </TouchableOpacity>
+      if (this.state.sabotage != "") {
+        return (
+          <Text style={{ color: "red", fontSize: 18 }}>
+            There's sabotage: {this.state.sabotage}
+          </Text>
+        );
+        //   <TouchableOpacity
+        //   onPress={() => {
+        //     // clear
+        //     db.ref("AmongUS/current_game_settings/").update({
+        //       sabotage: ""
+        //     });
+        //     }
+        //   }
+        //   style={styles.button}
+        // >
+        //   <Text>remove sabotage</Text>
+        // </TouchableOpacity>
       }
     }
   }
@@ -311,13 +356,21 @@ class PlayerPage extends React.Component {
       joinedGame: false,
       totalDoneTasks: 0,
       sabotage: "",
+      isSabotage: false,
       meeting: "",
     };
 
+    db.ref("AmongUS/Game_Settings/sabotage").on("value", (snapshot) => {
+      this.setState({ isSabotage: snapshot.val() });
+      if (!this.state.imposter && this.state.isSabotage) {
+        this.props.navigation.navigate("");
+      }
+    });
+
     db.ref("AmongUS/Game_Settings/game_started").once("value", (snapshot) => {
-      if (snapshot.val()){
+      if (snapshot.val()) {
         Alert.alert("The game has already started!");
-        this.props.navigation.navigate("Home")
+        this.props.navigation.navigate("Home");
       }
     });
   }
@@ -370,6 +423,15 @@ class PlayerPage extends React.Component {
             ></Image>
             {this.loadCenter()}
             {this.loadTask()}
+            <TouchableOpacity
+              disabled={this.state.imposter}
+              style={[
+                styles.button,
+                { opacity: this.state.imposter ? "0" : "1" },
+              ]}
+            >
+              <Text>ابعص عليهم اللعبة</Text>
+            </TouchableOpacity>
           </View>
         );
       }
@@ -528,9 +590,27 @@ function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen
+          options={{ headerLeft: null, gestureEnabled: false }}
+          name="Home"
+          component={Home}
+        />
         <Stack.Screen name="Player Page" component={PlayerPage} />
-        <Stack.Screen name="Admin Page" component={AdminPage} />
+        <Stack.Screen
+          options={{ headerLeft: null, gestureEnabled: false }}
+          name="Admin Page"
+          component={AdminPage}
+        />
+        <Stack.Screen
+          options={{ headerLeft: null, gestureEnabled: false }}
+          name="Node Sabotage"
+          component={sabotageTasks[1]}
+        />
+        <Stack.Screen
+          options={{ headerLeft: null, gestureEnabled: false }}
+          name="Keypad Sabotage"
+          component={sabotageTasks[1]}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
