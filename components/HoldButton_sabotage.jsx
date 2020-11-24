@@ -29,15 +29,16 @@ export default class HoldButton extends React.Component {
           this.setState({ progress: this.state.progress + 20 });
         } else {
           clearInterval(startDownload);
-          // 
-        Alert.alert("Finished");
-        // increment one on the db and return to player page
-        this.props.route.params.db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
-        var count = snapshot.val();
-        count++;
-        this.props.route.params.db.ref("AmongUS/current_game_settings/").update({num_Tasks:count});
-        this.props.navigation.goBack();
-        });
+          this.props.route.params.db.ref("AmongUS/current_game_settings/sabotageCounter").once("value", (snapshot) => {
+            var count = snapshot.val();
+            count++;
+            this.props.route.params.db.ref("AmongUS/current_game_settings/").update({sabotageCounter:count});
+          });
+          this.props.route.params.db.ref("AmongUS/current_game_settings/sabotageCounter").on("value", (snapshot) => {
+            if (snapshot.val()==4){
+              this.props.navigation.goBack();
+            }
+          });
           //
         }
       }, 2000);

@@ -10,7 +10,7 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
-import HoldButton from "./components/HoldButton.jsx";
+import HoldButton from "./components/HoldButton_sabotage.jsx";
 import KeyPad from "./components/KeyPad.jsx";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
@@ -19,6 +19,7 @@ import ProgressBar from "react-native-progress/Bar";
 import * as firebase from "firebase";
 import { color } from "react-native-reanimated";
 
+// change make one task for sabotage.
 let sabotageTasks = [HoldButton, KeyPad];
 
 const windowWidth = Dimensions.get("window").width;
@@ -545,12 +546,12 @@ class PlayerPage extends React.Component {
             ).on("value", (snapshot) => {
               if (snapshot.val() != "") {
                 // load the task
-                // console.log("loading task with id:" + this.state.myTasks[snapshot.val()].Task_id);
+                 console.log("loading task with id:" + this.state.myTasks[snapshot.val()].Task_id);
                 // this.setState({ currentTask: this.state.myTasks[snapshot.val()].Task_id });
               }
             });
             if (this.state.isSabotage) {
-              this.props.navigation.navigate("Node Sabotage");
+              // this.props.navigation.navigate("Node Sabotage", {db: db});
               return (
                 <Text style={{ fontSize: 18 }}>
                   There's sabotage
@@ -601,11 +602,6 @@ function App() {
           options={{ headerLeft: null, gestureEnabled: false }}
           name="Node Sabotage"
           component={sabotageTasks[0]}
-        />
-        <Stack.Screen
-          options={{ headerLeft: null, gestureEnabled: false }}
-          name="Keypad Sabotage"
-          component={sabotageTasks[1]}
         />
       </Stack.Navigator>
     </NavigationContainer>

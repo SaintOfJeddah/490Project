@@ -2,6 +2,12 @@ import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import { Alert, Dimensions, StyleSheet, Text, View } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
+import { createStackNavigator } from "@react-navigation/stack";
+import { NavigationContainer } from "@react-navigation/native";
+import ProgressBar from "react-native-progress/Bar";
+import * as firebase from "firebase";
+import { color } from "react-native-reanimated";
+
 
 const width = Dimensions.get("window").width;
 const height = Dimensions.get("window").height;
@@ -67,6 +73,13 @@ export default class KeyPad extends React.Component {
             if (this.state.number == parseInt(this.state.guess)) {
               Alert.alert("Correct Password!");
               this.setState({ guess: "" });
+              // increment one on the db and return to player page
+              this.props.route.params.db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
+                var count = snapshot.val();
+                count++;
+                this.props.route.params.db.ref("AmongUS/current_game_settings/").update({num_Tasks:count});
+                this.props.navigation.goBack();
+              });
             } else {
               Alert.alert("Wrong Password! Try again");
               this.setState({ guess: "" });
