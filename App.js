@@ -10,7 +10,7 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
-import HoldButton from "./components/HoldButton_sabotage.jsx";
+import HoldButton from "./components/HoldButton.jsx";
 import KeyPad from "./components/KeyPad.jsx";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
@@ -18,6 +18,7 @@ import { TextInput, TouchableOpacity } from "react-native-gesture-handler";
 import ProgressBar from "react-native-progress/Bar";
 import * as firebase from "firebase";
 import { color } from "react-native-reanimated";
+import DialogInput from 'react-native-dialog-input';
 
 // change make one task for sabotage.
 let sabotageTasks = [HoldButton, KeyPad];
@@ -419,8 +420,43 @@ class PlayerPage extends React.Component {
   }
 
   loadTask() {
+    // god bless apple.
     if (this.state.currentTask > 0) {
-      return <Text>loading task: {this.state.currentTask}</Text>;
+
+      if (this.state.currentTask==1){ // [Physical] Guess the tone
+          return <DialogInput isDialogVisible={true}
+            title={"Guess the tone"}
+            message={"What was the game? (in english)"}
+            hintInput ={"The game"}
+            submitInput={ (inputText) => {
+              if (inputText.toLowerCase()=="mario"){
+                this.props.route.params.db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
+                  var count = snapshot.val();
+                  count++;
+                  this.props.route.params.db.ref("AmongUS/current_game_settings/").update({num_Tasks:count});
+                  this.props.navigation.goBack();
+                  });              
+              }
+              console.log(inputText);
+              this.showDialog(false);
+            }
+          }
+            closeDialog={ () => {this.isDialogVisible(false)}}>
+          </DialogInput>
+      }else if (this.state.currentTask==2){ // [Physical] Decrypt the code
+
+      }else if (this.state.currentTask==3){ // [Physical] Joystick
+
+      }else if (this.state.currentTask==4){ // KeyPad
+        this.props.navigation.navigate("Keypad task", {db: db});
+      }else if (this.state.currentTask==5){ // Hold button
+        this.props.navigation.navigate("Node task", {db: db});
+      }else {
+        this.setState({currentTask: 0});
+      }
+      this.setState({currentTask: 0});
+      //return <Text>loading task: {this.state.currentTask}</Text>;
+      //this.setState({currentTask: 0});
     }
   }
 
@@ -450,7 +486,7 @@ class PlayerPage extends React.Component {
         name: this.state.name,
         imposter: false,
         dead: false,
-        current_task: "",
+        current_task: 0,
       });
       this.setState({ color: color });
       this.setState({ joinedGame: true });
@@ -488,7 +524,6 @@ class PlayerPage extends React.Component {
             // update status
             this.setState({ imposter: true });
             // show imposter sabotage screen
-            // TODO
           } else {
             // load my task
             db.ref(
@@ -497,15 +532,16 @@ class PlayerPage extends React.Component {
                 "/tasks_group_id"
             ).once("value", (snapshot) => {
               this.setState({ myTasks: globalTasks[snapshot.val()] });
+              
             });
             // Waiting for scanner
             db.ref(
               "AmongUS/currentPlayers/" + this.state.deviceID + "/current_task"
             ).on("value", (snapshot) => {
-              if (snapshot.val() != "") {
+              if (snapshot.val()!=0) {
                 // load the task
-                // console.log("loading task with id:" + this.state.myTasks[snapshot.val()].Task_id);
-                // this.setState({ currentTask: this.state.myTasks[snapshot.val()].Task_id });
+                console.log("loading task with id:" + this.state.myTasks[snapshot.val()].Task_id);
+                this.setState({ currentTask: this.state.myTasks[snapshot.val()].Task_id });
               }
             });
           }
@@ -540,16 +576,6 @@ class PlayerPage extends React.Component {
             </View>
             );
           } else {
-            // player sabotage
-            db.ref(
-              "AmongUS/currentPlayers/" + this.state.deviceID + "/current_task"
-            ).on("value", (snapshot) => {
-              if (snapshot.val() != "") {
-                // load the task
-                 console.log("loading task with id:" + this.state.myTasks[snapshot.val()].Task_id);
-                // this.setState({ currentTask: this.state.myTasks[snapshot.val()].Task_id });
-              }
-            });
             if (this.state.isSabotage) {
               // this.props.navigation.navigate("Node Sabotage", {db: db});
               return (
@@ -574,7 +600,7 @@ class PlayerPage extends React.Component {
           }
         }
       } else {
-        return <Text>u r dead</Text>;
+        return <Text>You are dead :)</Text>;
       }
     }
   }
@@ -600,8 +626,13 @@ function App() {
         />
         <Stack.Screen
           options={{ headerLeft: null, gestureEnabled: false }}
-          name="Node Sabotage"
-          component={sabotageTasks[0]}
+          name="Node task"
+          component={HoldButton}
+        />
+        <Stack.Screen
+          options={{ headerLeft: null, gestureEnabled: false }}
+          name="Keypad task"
+          component={KeyPad}
         />
       </Stack.Navigator>
     </NavigationContainer>
