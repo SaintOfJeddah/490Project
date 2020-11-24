@@ -36,6 +36,7 @@ var firebaseConfig = {
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
+
 const db = firebase.database();
 
 const colorsPath = {
@@ -247,7 +248,6 @@ class AdminPage extends React.Component {
         return (
           <TouchableOpacity
             onPress={() => {
-              // clear
               db.ref("AmongUS/current_game_settings/").update({
                 meeting: "",
               });
@@ -264,24 +264,12 @@ class AdminPage extends React.Component {
   }
   sabotageAlert() {
     {
-      if (this.state.sabotage != "") {
+      if (this.state.sabotage) {
         return (
           <Text style={{ color: "red", fontSize: 18 }}>
-            There's sabotage: {this.state.sabotage}
+            There's sabotage task in progress
           </Text>
         );
-        //   <TouchableOpacity
-        //   onPress={() => {
-        //     // clear
-        //     db.ref("AmongUS/current_game_settings/").update({
-        //       sabotage: ""
-        //     });
-        //     }
-        //   }
-        //   style={styles.button}
-        // >
-        //   <Text>remove sabotage</Text>
-        // </TouchableOpacity>
       }
     }
   }
@@ -292,6 +280,14 @@ class AdminPage extends React.Component {
         {this.getButtons()}
         {this.meetingAlert()}
         {this.sabotageAlert()}
+        <Text>Total tasks bar: </Text>
+            <ProgressBar
+              borderRadius={4}
+              color={'black'}
+              animated={true}
+              progress={this.state.totalDoneTasks / 20}
+              width={windowWidth * 0.5}
+           />
         <ScrollView
           contentContainerStyle={{
             width: windowWidth,
@@ -355,17 +351,9 @@ class PlayerPage extends React.Component {
       dead: false,
       joinedGame: false,
       totalDoneTasks: 0,
-      sabotage: "",
       isSabotage: false,
       meeting: "",
     };
-
-    db.ref("AmongUS/Game_Settings/sabotage").on("value", (snapshot) => {
-      this.setState({ isSabotage: snapshot.val() });
-      if (!this.state.imposter && this.state.isSabotage) {
-        this.props.navigation.navigate("");
-      }
-    });
 
     db.ref("AmongUS/Game_Settings/game_started").once("value", (snapshot) => {
       if (snapshot.val()) {
@@ -423,15 +411,6 @@ class PlayerPage extends React.Component {
             ></Image>
             {this.loadCenter()}
             {this.loadTask()}
-            <TouchableOpacity
-              disabled={this.state.imposter}
-              style={[
-                styles.button,
-                { opacity: this.state.imposter ? "0" : "1" },
-              ]}
-            >
-              <Text>ابعص عليهم اللعبة</Text>
-            </TouchableOpacity>
           </View>
         );
       }
@@ -493,7 +472,7 @@ class PlayerPage extends React.Component {
         // if something changed
         db.ref("AmongUS/current_game_settings/").on("value", (snapshot) => {
           this.setState({ totalDoneTasks: snapshot.val().num_Tasks });
-          this.setState({ sabotage: snapshot.val().sabotage });
+          this.setState({ isSabotage: snapshot.val().sabotage });
           this.setState({ meeting: snapshot.val().meeting });
         });
 
@@ -510,7 +489,6 @@ class PlayerPage extends React.Component {
             // show imposter sabotage screen
             // TODO
           } else {
-            //Alert("you are not the imposter")
             // load my task
             db.ref(
               "AmongUS/currentPlayers/" +
@@ -549,15 +527,33 @@ class PlayerPage extends React.Component {
         } else {
           if (this.state.imposter) {
             return (
-              <Text>You are the IMPOSTER</Text>
-              // load sabotage menu
+              <View>
+                <Text>You are the IMPOSTER</Text>,
+                <TouchableOpacity
+                style={[
+                  styles.button
+                ]}
+                >
+                <Text>Sabotage on them</Text>
+              </TouchableOpacity>
+            </View>
             );
           } else {
-            // check if there's a sabotage don't load tasks
-            if (this.state.sabotage != "") {
+            // player sabotage
+            db.ref(
+              "AmongUS/currentPlayers/" + this.state.deviceID + "/current_task"
+            ).on("value", (snapshot) => {
+              if (snapshot.val() != "") {
+                // load the task
+                // console.log("loading task with id:" + this.state.myTasks[snapshot.val()].Task_id);
+                // this.setState({ currentTask: this.state.myTasks[snapshot.val()].Task_id });
+              }
+            });
+            if (this.state.isSabotage) {
+              this.props.navigation.navigate("Node Sabotage");
               return (
                 <Text style={{ fontSize: 18 }}>
-                  There's sabotage: {this.state.sabotage}
+                  There's sabotage
                 </Text>
               );
             } else {
@@ -604,7 +600,7 @@ function App() {
         <Stack.Screen
           options={{ headerLeft: null, gestureEnabled: false }}
           name="Node Sabotage"
-          component={sabotageTasks[1]}
+          component={sabotageTasks[0]}
         />
         <Stack.Screen
           options={{ headerLeft: null, gestureEnabled: false }}
