@@ -422,31 +422,66 @@ class PlayerPage extends React.Component {
   loadTask() {
     // god bless apple.
     if (this.state.currentTask > 0) {
-
       if (this.state.currentTask==1){ // [Physical] Guess the tone
-          return <DialogInput isDialogVisible={true}
+          return <DialogInput isDialogVisible={this.state.toneDialog}
             title={"Guess the tone"}
             message={"What was the game? (in english)"}
-            hintInput ={"The game"}
             submitInput={ (inputText) => {
               if (inputText.toLowerCase()=="mario"){
-                this.props.route.params.db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
+                db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
                   var count = snapshot.val();
                   count++;
-                  this.props.route.params.db.ref("AmongUS/current_game_settings/").update({num_Tasks:count});
-                  this.props.navigation.goBack();
-                  });              
+                  db.ref("AmongUS/current_game_settings/").update({num_Tasks:count});
+                  });   
+                  Alert.alert("Correct!");           
+              }else{
+                Alert.alert("incorrect!");           
               }
-              console.log(inputText);
-              this.showDialog(false);
+              this.setState({toneDialog: false});
             }
           }
-            closeDialog={ () => {this.isDialogVisible(false)}}>
+          closeDialog={ () => {this.setState({toneDialog: false})}}>
           </DialogInput>
       }else if (this.state.currentTask==2){ // [Physical] Decrypt the code
-
+          return <DialogInput isDialogVisible={this.state.codeDialog}
+          title={"What was the code?"}
+          message={"What was the code you got?"}
+          submitInput={ (inputText) => {
+            if (inputText.toLowerCase()=="code"){
+              db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
+                var count = snapshot.val();
+                count++;
+                db.ref("AmongUS/current_game_settings/").update({num_Tasks:count});
+                });  
+                Alert.alert("Correct!");           
+            }else{
+              Alert.alert("incorrect!");
+            }
+            this.setState({codeDialog: false});
+          }
+        }
+        closeDialog={ () => {this.setState({codeDialog: false})}}>
+        </DialogInput>
       }else if (this.state.currentTask==3){ // [Physical] Joystick
-
+        return <DialogInput isDialogVisible={this.state.joystickDialog}
+        title={"Joystick task"}
+        message={"What was the code you got?"}
+        submitInput={ (inputText) => {
+          if (inputText.toLowerCase()=="code"){
+            db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
+              var count = snapshot.val();
+              count++;
+              db.ref("AmongUS/current_game_settings/").update({num_Tasks:count});
+              });  
+              Alert.alert("Correct!");           
+          }else{
+            Alert.alert("incorrect!");
+          }
+          this.setState({joystickDialog: false});
+        }
+      }
+      closeDialog={ () => {this.setState({joystickDialog: false})}}>
+      </DialogInput>
       }else if (this.state.currentTask==4){ // KeyPad
         this.props.navigation.navigate("Keypad task", {db: db});
       }else if (this.state.currentTask==5){ // Hold button
@@ -542,6 +577,17 @@ class PlayerPage extends React.Component {
                 // load the task
                 console.log("loading task with id:" + this.state.myTasks[snapshot.val()].Task_id);
                 this.setState({ currentTask: this.state.myTasks[snapshot.val()].Task_id });
+                  if (this.state.currentTask==1){ // [Physical] Guess the tone
+                    this.setState({toneDialog: true});
+                  }else if (this.state.currentTask==2){ // [Physical] Decrypt the code
+                    this.setState({codeDialog: true});
+                  }else if (this.state.currentTask==3){ // [Physical] Joystick
+                    this.setState({joystickDialog: true});
+                  }else if (this.state.currentTask==4){ // KeyPad
+                    this.props.navigation.navigate("Keypad task", {db: db});
+                  }else if (this.state.currentTask==5){ // Hold button
+                    this.props.navigation.navigate("Node task", {db: db});
+                  }
               }
             });
           }
@@ -563,9 +609,10 @@ class PlayerPage extends React.Component {
           );
         } else {
           if (this.state.imposter) {
+            // todo add on click
             return (
               <View>
-                <Text>You are the IMPOSTER</Text>,
+                <Text>You are the IMPOSTER</Text>
                 <TouchableOpacity
                 style={[
                   styles.button
