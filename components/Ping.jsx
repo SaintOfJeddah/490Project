@@ -89,16 +89,18 @@ export default class Ping extends React.Component {
                     this.state.cmdText +
                     "\nPing result: Packets sent: 4, Packets Received: 4, Success Rate: 100%",
                 });
-                this.props.route.params.db
-                .ref("AmongUS/current_game_settings/sabotageCounter")
-                .once("value", (snapshot) => {
-                  var count = snapshot.val();
-                  count++;
-                  this.props.route.params.db
-                    .ref("AmongUS/current_game_settings/")
-                    .update({ sabotageCounter: count });
-                });
-                this.props.navigation.goBack();
+                // update the db
+                this.props.route.params.db.ref("AmongUS/current_game_settings/sabotageCounter").once("value", (snapshot) => {
+                    var count = snapshot.val();
+                    count++;
+                    this.props.route.params.db.ref("AmongUS/current_game_settings/").update({sabotageCounter:count});
+                  });
+                  this.props.route.params.db.ref("AmongUS/current_game_settings/sabotageCounter").on("value", (snapshot) => {
+                    if (snapshot.val()==4){
+                      this.props.navigation.goBack();
+                    }
+                  });
+
             }, 9000);
             }}
           ></Switch>
