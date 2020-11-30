@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import HoldButton from "./components/HoldButton.jsx";
 import KeyPad from "./components/KeyPad.jsx";
+import Ping from './components/Ping.jsx';
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
 import { TextInput, TouchableOpacity } from "react-native-gesture-handler";
@@ -425,9 +426,9 @@ class PlayerPage extends React.Component {
       if (this.state.currentTask==1){ // [Physical] Guess the tone
           return <DialogInput isDialogVisible={this.state.toneDialog}
             title={"Guess the tone"}
-            message={"What was the game? (in english)"}
+            message={"What was the game?"}
             submitInput={ (inputText) => {
-              if (inputText.toLowerCase()=="mario"){
+              if (inputText.toLowerCase().includes("mario")){
                 db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
                   var count = snapshot.val();
                   count++;
@@ -447,7 +448,7 @@ class PlayerPage extends React.Component {
           title={"What was the code?"}
           message={"What was the code you got?"}
           submitInput={ (inputText) => {
-            if (inputText.toLowerCase()=="code"){
+            if (inputText.toLowerCase().includes("maradona")){
               db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
                 var count = snapshot.val();
                 count++;
@@ -467,7 +468,7 @@ class PlayerPage extends React.Component {
         title={"Joystick task"}
         message={"What was the code you got?"}
         submitInput={ (inputText) => {
-          if (inputText.toLowerCase()=="code"){
+          if (inputText.toLowerCase().includes("code")){
             db.ref("AmongUS/current_game_settings/num_Tasks").once("value", (snapshot) => {
               var count = snapshot.val();
               count++;
@@ -490,8 +491,6 @@ class PlayerPage extends React.Component {
         this.setState({currentTask: 0});
       }
       this.setState({currentTask: 0});
-      //return <Text>loading task: {this.state.currentTask}</Text>;
-      //this.setState({currentTask: 0});
     }
   }
 
@@ -617,14 +616,20 @@ class PlayerPage extends React.Component {
                 style={[
                   styles.button
                 ]}
+                onPress={() => 
+                  db.ref("AmongUS/current_game_settings/").update({
+                    sabotage: True
+                   })
+                }
                 >
+                
                 <Text>Sabotage on them</Text>
               </TouchableOpacity>
             </View>
             );
           } else {
             if (this.state.isSabotage) {
-              // this.props.navigation.navigate("Node Sabotage", {db: db});
+             this.props.navigation.navigate("Ping task", {db: db});
               return (
                 <Text style={{ fontSize: 18 }}>
                   There's sabotage
@@ -680,6 +685,11 @@ function App() {
           options={{ headerLeft: null, gestureEnabled: false }}
           name="Keypad task"
           component={KeyPad}
+        />
+        <Stack.Screen
+          options={{ headerLeft: null, gestureEnabled: false }}
+          name="Ping task"
+          component={Ping}
         />
       </Stack.Navigator>
     </NavigationContainer>
