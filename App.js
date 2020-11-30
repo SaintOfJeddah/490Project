@@ -21,9 +21,6 @@ import * as firebase from "firebase";
 import { color } from "react-native-reanimated";
 import DialogInput from 'react-native-dialog-input';
 
-// change make one task for sabotage.
-let sabotageTasks = [HoldButton, KeyPad];
-
 const windowWidth = Dimensions.get("window").width;
 const windowHeight = Dimensions.get("window").height;
 
@@ -421,7 +418,6 @@ class PlayerPage extends React.Component {
   }
 
   loadTask() {
-    // god bless apple.
     if (this.state.currentTask > 0) {
       if (this.state.currentTask==1){ // [Physical] Guess the tone
           return <DialogInput isDialogVisible={this.state.toneDialog}
@@ -608,7 +604,6 @@ class PlayerPage extends React.Component {
           );
         } else {
           if (this.state.imposter) {
-            // todo add on click
             return (
               <View>
                 <Text>You are the IMPOSTER</Text>
