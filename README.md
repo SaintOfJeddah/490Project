@@ -1,4 +1,3 @@
-# 490Project
 # Among Us Game In Real Life
 Our CPIT490 (Arduino and microcontrollers) Course Project 
 Team members:
