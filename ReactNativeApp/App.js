@@ -24,6 +24,7 @@ import DialogInput from 'react-native-dialog-input';
 const windowWidth = Dimensions.get("window").width;
 const windowHeight = Dimensions.get("window").height;
 
+// TODO: replace it with your own firebase auth config
 var firebaseConfig = {
   apiKey: "AIzaSyDeGXVSmZO6EAOYRDDcSSw98SKYPiMB2OE",
   authDomain: "esp8266-38237.firebaseapp.com",
