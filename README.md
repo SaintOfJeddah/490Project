@@ -4,7 +4,7 @@ Team members:
 -  Abdulmajeed Alahmadi (MjedAl) [https://github.com/MjedAl]
 -  Ahmed Al-Osaimi (8BallAhmed) [https://github.com/8BallAhmed]
 -  Adel Mansho (AMansho) [https://github.com/AMansho]
--  Ammar Al-Bar
+-  Ammar Al-Bar (ammarbr99) [https://github.com/ammarbr99]
 -  Faris Al-nehari
 
 ## About
