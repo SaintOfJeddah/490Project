@@ -3,6 +3,9 @@ Our CPIT490 (Arduino and microcontrollers) Course Project
 Team members:
 -  Abdulmajeed Alahmadi (MjedAl) [https://github.com/MjedAl]
 -  Ahmed Al-Osaimi (8BallAhmed) [https://github.com/8BallAhmed]
+-  Adel Mansho (AMansho) [https://github.com/AMansho]
+-  Ammar Al-Bar
+-  Faris Al-nehari
 
 ## About
 
