@@ -1,0 +1,12 @@
+{
+  "name": "amongus",
+  "displayName": "amongus",
+  "expo": {
+    "name": "amongus",
+    "slug": "amongus",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
